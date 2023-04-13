@@ -5,6 +5,7 @@ import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { catchError, map, startWith, switchMap } from 'rxjs';
 import {merge, Observable, of as observableOf} from 'rxjs';
+import { StorageService } from './services/storage.service';
 
 
 @Component({
@@ -16,7 +17,7 @@ export class AppComponent {
   title = 'data_table';
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
-  displayedColumns: string[] = ['fav', 'code', 'name', 'state', 'country', 'domains', 'web_pages'];
+  displayedColumns: string[] = ['fav',  'name', 'country', 'code', 'web_pages'];
   isLoading = false;
   value = '';
   // dataSource: MatTableDataSource<any>;
@@ -27,7 +28,8 @@ export class AppComponent {
   resultsLength = 0;
   selectedCountry = '';
 
-  constructor(public http: HttpClient){}
+  constructor(public http: HttpClient,
+    public storage: StorageService){}
 
   ngOnInit(){
     this.getDataSource()
@@ -54,11 +56,17 @@ export class AppComponent {
     //   console.log(data);
     // })
 
-
+    let favData = this.storage.getLocalStorage();
+    console.log(favData);
     this.http.get<any>('http://universities.hipolabs.com/search').subscribe(resp=>{
       this.dataSource = new MatTableDataSource(resp)
       resp.map((data: any)=>{
         this.countries[data.country] = data.country;
+        if(favData){
+          if(favData.indexes[data.name]){
+            data['addedFav'] = true;
+          }
+        }
         return data.country
       })
       this.countriesArr = Object.keys(this.countries)
@@ -79,19 +87,75 @@ export class AppComponent {
     window.open(page, "_blank")
   }
 
-  applyFilter(event: Event){
-    const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filterPredicate = function(data, filter: string): boolean {
-      return data.name.toLowerCase().includes(filter);
+  applyFilter(){
+    const filterValue = this.value;
+    if(!filterValue){
+      if(this.selectedCountry){
+        this.applyCountry(this.selectedCountry)
+        return;
+      }
+    }
+    this.dataSource.filterPredicate = (data, filter: string) => {
+      if(this.selectedCountry){
+        if(data.country.toLowerCase().includes(this.selectedCountry.toLowerCase())){
+          return data.name.toLowerCase().includes(filter)
+        }
+      } else {
+        return data.name.toLowerCase().includes(filter);
+      }
     };
     this.dataSource.filter = filterValue.trim().toLowerCase();
   }
 
   applyCountry(country: string){
-    console.log(country);
-    this.dataSource.filterPredicate = function(data, filter: string): boolean {
-      return data.country.toLowerCase().includes(filter);
+    if(!this.selectedCountry){
+      if(this.value){
+        this.applyFilter()
+        return;
+      }
+    }
+    this.dataSource.filterPredicate = (data, filter: string) => {
+      if(this.value){
+        if(data.name.toLowerCase().includes(this.value.toLowerCase())){
+          return data.country.toLowerCase().includes(filter);
+        } else {
+          return false;
+        }
+      } else {
+
+        return data.country.toLowerCase().includes(filter);
+      }
     };
     this.dataSource.filter = country.trim().toLowerCase();
+  }
+
+  addFav(ele: any){
+    ele['addedFav'] = true;
+    this.saveLocalStorage(ele)
+  } 
+
+  saveLocalStorage(ele: any){
+    let currentData = this.storage.getLocalStorage();
+    console.log(currentData)
+    if(!currentData){
+      let favs: any = {
+        indexes: {}
+      }
+      favs.indexes[ele['name']] = ele;
+      this.storage.setLocalStorage(favs)
+    } else {
+      currentData.indexes[ele['name']] = ele;
+      this.storage.setLocalStorage(currentData)
+
+    }
+  }
+
+  removeFav(ele: any){
+    let currentData = this.storage.getLocalStorage();
+    delete currentData.indexes[ele['name']]
+
+    ele['addedFav'] = false;
+
+    this.storage.setLocalStorage(currentData)
   }
 }

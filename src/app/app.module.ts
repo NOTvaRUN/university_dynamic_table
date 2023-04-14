@@ -18,6 +18,7 @@ import {MatIconModule} from '@angular/material/icon';
 import { SearchPipe } from './pipes/search.pipe';
 import {MatSelectModule} from '@angular/material/select';
 
+import {MatButtonModule} from '@angular/material/button';
 
 
 @NgModule({
@@ -37,7 +38,8 @@ import {MatSelectModule} from '@angular/material/select';
     MatInputModule,
     MatIconModule,
     FormsModule,
-    MatSelectModule
+    MatSelectModule,
+    MatButtonModule
   ],
   providers: [],
   bootstrap: [AppComponent]

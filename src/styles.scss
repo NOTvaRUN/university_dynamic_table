@@ -2,6 +2,62 @@
 @import "~@angular/material/prebuilt-themes/indigo-pink.css";
 
 
+@font-face {
+    // Defining what the font will be called
+    font-family: "MB";
+    // Linking to the font file
+    src: url(./assets/font/Montserrat-Bold.ttf);
+  }
+
+  @font-face {
+    // Defining what the font will be called
+    font-family: "MR";
+    // Linking to the font file
+    src: url(./assets/font/Montserrat-Regular.ttf);
+  }
+
 .highlighted-text{
     background-color: red;
+}
+*{
+    font-family: "MR";
+}
+
+table{
+    thead{
+        background: #e4e4e4!important;
+     
+        tr{
+            th{
+                font-family: "MB"!important;
+                color: #434343;
+            }
+            td:first-child{
+                background-color: red;
+            }
+
+            td:nth-child(1){
+                span{
+                    margin: 0 auto;
+                }
+            }
+        }
+    }
+}
+
+// .fav-center{
+//     span{
+//         margin: 0 auto;
+//     }
+// }
+.svg-icon{
+    cursor: pointer;
+    height: 30px;
+    aspect-ratio: 1;
+    display: block;
+}
+.badge-primary{
+    padding: 7px;
+    font-size: 12px;
+    font-weight: 500;
 }

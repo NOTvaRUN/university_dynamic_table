@@ -3,10 +3,20 @@ import { Component, ViewChild } from '@angular/core';
 import {MatPaginator} from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
-import { catchError, map, startWith, switchMap } from 'rxjs';
-import {merge, Observable, of as observableOf} from 'rxjs';
 import { StorageService } from './services/storage.service';
 
+const ELEMENT_DATA = [
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''},
+  {name: '', country: '', alpha_two_code: '', web_pages: ''}
+];
 
 @Component({
   selector: 'app-root',
@@ -21,7 +31,7 @@ export class AppComponent {
   isLoading = false;
   value = '';
   // dataSource: MatTableDataSource<any>;
-  dataSource: MatTableDataSource<any>;
+  dataSource: MatTableDataSource<any> = new MatTableDataSource(ELEMENT_DATA);
   @ViewChild(MatSort) sort: MatSort;
   countries: any = {};
   countriesArr: any = [];
@@ -55,10 +65,12 @@ export class AppComponent {
     // ).subscribe(data=>{
     //   console.log(data);
     // })
-
+    this.isLoading = false;
     let favData = this.storage.getLocalStorage();
-    console.log(favData);
+
     this.http.get<any>('http://universities.hipolabs.com/search').subscribe(resp=>{
+      this.isLoading = true;
+      console.log(this.isLoading, resp)
       this.dataSource = new MatTableDataSource(resp)
       resp.map((data: any)=>{
         this.countries[data.country] = data.country;
@@ -122,7 +134,6 @@ export class AppComponent {
           return false;
         }
       } else {
-
         return data.country.toLowerCase().includes(filter);
       }
     };
@@ -157,5 +168,19 @@ export class AppComponent {
     ele['addedFav'] = false;
 
     this.storage.setLocalStorage(currentData)
+  }
+
+  public favToggled = false;
+  toggleFav(){
+    this.favToggled = !this.favToggled;
+    if(this.favToggled){
+      this.dataSource.filterPredicate = (data, filter: string) => {
+        return data.addedFav
+      };
+      
+      this.dataSource.filter = 'added'
+    } else {
+      this.applyFilter()
+    }
   }
 }

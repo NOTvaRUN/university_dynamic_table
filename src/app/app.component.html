@@ -1,90 +1,111 @@
 <div class="container mt-4">
   <div class="header">
     <mat-card>
-      <mat-card-content>
-        <mat-form-field class="example-form-field" appearance="outline">
+      <mat-card-content class="row">
+        <mat-form-field class="example-form-field col-md-4" appearance="outline">
           <mat-label>Search University</mat-label>
-          <input matInput type="text" (keyup)="applyFilter()"  [(ngModel)]="value">
+          <input matInput type="text" (keyup)="applyFilter()"  [(ngModel)]="value" [disabled]="!isLoading">
           <!-- <button *ngIf="value" matSuffix mat-icon-button aria-label="Clear" (click)="value=''">
             <mat-icon>close</mat-icon>
 
           </button> -->
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field class="col-md-4" appearance="outline">
           <mat-label>Choose an option</mat-label>
-          <mat-select [(ngModel)]="selectedCountry">
+          <mat-select [(ngModel)]="selectedCountry" [disabled]="!isLoading">
             <ng-container *ngFor="let country of countriesArr">
               <mat-option value="option1" (click)="applyCountry(country)" [value]="country">{{country}}</mat-option>
 
             </ng-container>
           </mat-select>
         </mat-form-field>
-        <button class="btn btn-primary" (click)="applyCountry(''); selectedCountry = ''">Clear Country</button>
+        <!-- <mat-form-field class="col-md-2"> -->
+          <div class="col-md-2 d-inline-block">
+            <button  mat-raised-button color="primary" (click)="applyCountry(''); selectedCountry = ''" [disabled]="!isLoading">
+              Clear Country
+            </button>
+          </div>
+
+          <div class="col-md-2 d-inline-block">
+            <button mat-raised-button (click)="toggleFav()" [disabled]="!isLoading">Toggle Favourites</button>
+            <!-- <button class="btn btn-primary h-100" (click)="applyCountry(''); selectedCountry = ''">
+              View Favourites
+            </button> -->
+          </div>
+        <!-- </mat-form-field> -->
+        
       </mat-card-content>
     </mat-card>
   </div>
   <div class="body mt-4 mat-elevation-z8">
     <table mat-table [dataSource]="dataSource" class="">
-      <!--- Note that these columns can be defined in any order.
-            The actual rendered columns are set as a property on the row definition" -->
+
       <ng-container matColumnDef="fav">
         <th mat-header-cell *matHeaderCellDef> Favourites </th>
-        <td mat-cell *matCellDef="let element"> 
-          <ng-container *ngIf="element.addedFav">
-            <span (click)="removeFav(element)">⭐</span>
+        <td mat-cell *matCellDef="let element" class="text-center fav-center"> 
+          <ng-container *ngIf="isLoading; else skeleton">
+            <ng-container *ngIf="element.addedFav">
+              <span class="svg-icon" (click)="removeFav(element)">
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 26.9 25.65" style="enable-background:new 0 0 26.9 25.65" xml:space="preserve"><style type="text/css">.st0{clip-path:url(#SVGID_2_);} .st1{fill:#FFD401;}</style><g><g><defs><path id="SVGID_1_" d="M14.1,0.43l3.44,8.05l8.72,0.78c0.39,0.03,0.67,0.37,0.64,0.76c-0.02,0.19-0.1,0.35-0.24,0.47l0,0 l-6.6,5.76l1.95,8.54c0.09,0.38-0.15,0.75-0.53,0.84c-0.19,0.04-0.39,0-0.54-0.1l-7.5-4.48l-7.52,4.5 c-0.33,0.2-0.76,0.09-0.96-0.24c-0.1-0.16-0.12-0.35-0.08-0.52h0l1.95-8.54l-6.6-5.76c-0.29-0.25-0.32-0.7-0.07-0.99 C0.3,9.35,0.48,9.28,0.66,9.27l8.7-0.78l3.44-8.06c0.15-0.36,0.56-0.52,0.92-0.37C13.9,0.13,14.03,0.27,14.1,0.43L14.1,0.43 L14.1,0.43z"/></defs><clipPath id="SVGID_2_"><use xlink:href="#SVGID_1_" style="overflow:visible"/></clipPath><g class="st0"><defs><rect id="SVGID_3_" x="-0.08" y="-0.1" width="27.01" height="25.85"/></defs><clipPath id="SVGID_4_"><use xlink:href="#SVGID_3_" style="overflow:visible"/></clipPath><g style="clip-path:url(#SVGID_4_)"><image style="overflow:visible" width="64" height="57" xlink:href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAgEAlgCWAAD/7AARRHVja3kAAQAEAAAAHgAA/+4AIUFkb2JlAGTAAAAAAQMA EAMCAwYAAAJIAAACsAAAA4b/2wCEABALCwsMCxAMDBAXDw0PFxsUEBAUGx8XFxcXFx8eFxoaGhoX Hh4jJSclIx4vLzMzLy9AQEBAQEBAQEBAQEBAQEABEQ8PERMRFRISFRQRFBEUGhQWFhQaJhoaHBoa JjAjHh4eHiMwKy4nJycuKzU1MDA1NUBAP0BAQEBAQEBAQEBAQP/CABEIADwAQwMBIgACEQEDEQH/ xACiAAADAQEBAQAAAAAAAAAAAAAABAUCAQMGAQACAwEAAAAAAAAAAAAAAAAAAwQFBgIQAAIABQME AwAAAAAAAAAAAAARAQIDBAUTJBUSIzMlMhQ0EQABAQYGAQUAAAAAAAAAAAABABAgEXGhMrECEkJy AzEhUSITFBIAAgADBAgHAQAAAAAAAAAAAQIAEAMhMaEiUXGBkbHRMtIRYRJykjNzQv/aAAwDAQAC EQMRAAAA+68SfRyaBPIrKBPAoektl3NMDQREp1Cbmp+jJAbruANsptSOKwGsrkJlKXnLHRkgu0ZA 00m2/iyBqqudKto0FikOkNyQ6Ak51h66IGkrP//aAAgBAgABBQC/v7ijccreHK3hbZG6nrmUhu0I s4bkycN2hFnDcmRkljc6chpyFrJLC4P/2gAIAQMAAQUApUpJpNCmaFMnoyQlLeHbQirDtltDtIRW h2y2mjCl1ROqJVmjpn//2gAIAQEAAQUAr14UIcjIcjIcjIcjIcjIcjIUbyWtOZH4MYxjGWH6DJfB jGMYzH/oMp42MYxjMdHcmV8bGMYxmNjujL+NjGMYzGR3RmPExjGMZi/1l/8AV6PUnqT1J6k9SepL L6Guf//aAAgBAgIGPwBqdNgFAX+QbxHWPiI6x8RFNGcFXcA5RcZPqXhOj+iyfUvCdH9FkxNRFsWw +rR5Ax9tPc/bH209z9sUiKiHOtgDdsv/2gAIAQMCBj8ABIti7GLsYJAuEhtm3tMhtm/tMhlJvu8O cdDYc46Gw5w+VhlOjnL/2gAIAQEBBj8ABIJiYeisKsKsKsKsKsK0DKQYRizJMviRZkmcHxIsyTOD 4kWdczg+JFnXyOD44lnXyOD44lmT9MdMfjp91vqt9Vvqt9Vvqt9UPz6vsgfPiDP/2Q==" transform="matrix(0.48 0 0 -0.48 -1.1399 26.7469)"/></g></g></g><path class="st1" d="M14.1,0.43l3.44,8.05l8.72,0.78c0.39,0.03,0.67,0.37,0.64,0.76c-0.02,0.19-0.1,0.35-0.24,0.47l0,0l-1.18,1.03 c-3.21,1.11-7.42,1.78-12.03,1.78c-4.61,0-8.83-0.67-12.03-1.78l-1.18-1.03c-0.29-0.25-0.32-0.7-0.07-0.99 C0.3,9.35,0.48,9.28,0.66,9.27l8.7-0.78l3.44-8.06c0.15-0.36,0.56-0.52,0.92-0.37C13.9,0.13,14.03,0.27,14.1,0.43L14.1,0.43 L14.1,0.43z"/></g></svg>
+              </span>
+            </ng-container>
+            <ng-container *ngIf="!element.addedFav">
+              <span class="svg-icon" (click)="addFav(element)">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 117.42"><path d="M66.71 3.55L81.1 37.26l36.58 3.28v-.01c1.55.13 2.91.89 3.85 2.01a5.663 5.663 0 011.32 4.13v.01a5.673 5.673 0 01-1.69 3.57c-.12.13-.25.25-.39.36L93.25 74.64l8.19 35.83c.35 1.53.05 3.06-.73 4.29a5.652 5.652 0 01-3.54 2.52l-.14.03c-.71.14-1.43.15-2.12.02v.01c-.75-.13-1.47-.42-2.11-.84l-.05-.03-31.3-18.71-31.55 18.86a5.664 5.664 0 01-7.79-1.96c-.38-.64-.62-1.33-.73-2.02-.1-.63-.09-1.27.02-1.89.02-.13.04-.27.08-.4l8.16-35.7c-9.24-8.07-18.74-16.1-27.83-24.3l-.08-.08a5.64 5.64 0 01-1.72-3.7c-.1-1.45.36-2.93 1.4-4.12l.12-.13.08-.08a5.668 5.668 0 013.77-1.72h.06l36.34-3.26 14.44-33.8c.61-1.44 1.76-2.5 3.11-3.05 1.35-.54 2.9-.57 4.34.04.69.29 1.3.71 1.8 1.22.53.53.94 1.15 1.22 1.82l.02.06zm10.19 37.2L61.85 5.51a.42.42 0 00-.09-.14.42.42 0 00-.14-.09.427.427 0 00-.35 0c-.1.04-.19.12-.24.24L45.98 40.75c-.37.86-1.18 1.49-2.18 1.58l-37.9 3.4c-.08.01-.16.02-.24.02-.06 0-.13.02-.18.05-.03.01-.05.03-.07.05l-.1.12c-.05.08-.07.17-.06.26.01.09.04.18.09.25.06.05.13.11.19.17l28.63 25c.77.61 1.17 1.62.94 2.65l-8.51 37.22-.03.14c-.01.06-.02.12-.01.17a.454.454 0 00.33.36c.12.03.24.02.34-.04l32.85-19.64c.8-.5 1.85-.54 2.72-.02L95.43 112c.08.04.16.09.24.14.05.03.1.05.16.06v.01c.04.01.09.01.14 0l.04-.01c.12-.03.22-.1.28-.2.06-.09.08-.21.05-.33L87.8 74.28a2.6 2.6 0 01.83-2.55l28.86-25.2c.04-.03.07-.08.1-.13.02-.04.03-.1.04-.17a.497.497 0 00-.09-.33.48.48 0 00-.3-.15v-.01c-.01 0-.03 0-.03-.01l-37.97-3.41c-1-.01-1.93-.6-2.34-1.57z" fill="#ffcf00"/></svg>
+              </span>
+            </ng-container>
           </ng-container>
-          <ng-container *ngIf="!element.addedFav">
-            <span (click)="addFav(element)">☆</span>
-          </ng-container>
-           </td>
-      </ng-container>
-      <!-- Position Column -->
-     
+        </td>
+      </ng-container>     
     
-      <!-- Name Column -->
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef> Name </th>
         <td mat-cell *matCellDef="let element" >
-          <span [innerHTML]="element.name | search : value"></span>
-          </td>
+          <ng-container *ngIf="isLoading; else skeleton">
+            <span [innerHTML]="element.name | search : value"></span>
+          </ng-container>
+        </td>
       </ng-container>
 
-      <!-- <ng-container matColumnDef="state">
-        <th mat-header-cell *matHeaderCellDef> State </th>
-        <td mat-cell *matCellDef="let element"> {{ element['state-province'] ? element['state-province']  : '-' }} </td>
-      </ng-container>
-     -->
-      <!-- Weight Column -->
+      <ng-template #skeleton>
+        <span class="skele"></span>
+      </ng-template>
+
       <ng-container matColumnDef="country">
         <th mat-header-cell *matHeaderCellDef> Country </th>
-        <td mat-cell *matCellDef="let element"> {{element.country}} </td>
+        <td mat-cell *matCellDef="let element">
+          <ng-container *ngIf="isLoading; else skeleton">
+            <span >{{element.country}}</span>
+          </ng-container>
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="code">
         <th mat-header-cell *matHeaderCellDef> Country Code </th>
-        <td mat-cell *matCellDef="let element"> {{element.alpha_two_code | uppercase}} </td>
+        <td mat-cell *matCellDef="let element">
+          <ng-container *ngIf="isLoading; else skeleton">
+            <span >{{element.alpha_two_code | uppercase}}</span>
+          </ng-container>
+        </td>
       </ng-container>
-    
-      <!-- Symbol Column
-      <ng-container matColumnDef="domains">
-        <th mat-header-cell *matHeaderCellDef> Domains </th>
-        <td mat-cell *matCellDef="let element"> {{element.domains}} </td>
-      </ng-container> -->
 
       <ng-container matColumnDef="web_pages">
         <th mat-header-cell *matHeaderCellDef> Website </th>
         <td mat-cell *matCellDef="let element"> 
-          <div class="d-flex flex-column justify-content-center align-items-start" style="cursor: pointer">
-            <ng-container *ngFor="let page of element.web_pages">
-              <div class="badge badge-primary bg-primary m-2" (click)="navigate(page)">
-                {{page}}
-              </div>
-            </ng-container>
-          </div>
-          
+          <ng-container *ngIf="isLoading; else skeleton">
+            <div class="d-flex flex-column justify-content-center align-items-start" style="cursor: pointer">
+              <ng-container *ngFor="let page of element.web_pages">
+                <div class="badge badge-primary bg-primary m-2" (click)="navigate(page)">
+                  {{page}}
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+         
         </td>
       </ng-container>
+
     
       <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
       <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
@@ -97,6 +118,3 @@
   <!-- [length]="resultsLength" -->
   
 </div>
-
-
-<button class="btn btn-primary">Click me</button>

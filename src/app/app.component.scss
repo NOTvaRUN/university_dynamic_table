@@ -28,3 +28,44 @@
       background-position: 450px 0;
     }
   }
+
+.pagination{
+  position: sticky;
+  bottom: 1px;
+  width: 100%;
+  background: white;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  .icons {
+    display: flex;
+    align-items: center;
+    svg {
+      display: inline-block;
+      height: 27px;
+      aspect-ratio: 1;
+      cursor: pointer;
+    }
+    button {
+      border: none;
+      background: none;
+    }
+    button[disabled] svg{
+      fill: #0000001f;
+    }
+  }
+}
+
+.note{
+  font-size: 13px;
+  font-style: italic;
+  font-weight: bold;
+}
+.link{
+  text-decoration: none;
+  cursor: pointer;
+}
+.link:hover{
+  color: white;
+}

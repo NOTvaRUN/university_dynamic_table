@@ -1,9 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, ViewChild } from '@angular/core';
-import {MatPaginator} from '@angular/material/paginator';
-import { MatSort } from '@angular/material/sort';
-import { MatTableDataSource } from '@angular/material/table';
+import { Component, ElementRef, ViewChild } from '@angular/core';
 import { StorageService } from './services/storage.service';
+import { debounceTime, distinctUntilChanged, fromEvent, map, of, switchMap, tap, pipe } from 'rxjs';
 
 const ELEMENT_DATA = [
   {name: '', country: '', alpha_two_code: '', web_pages: ''},
@@ -26,52 +24,40 @@ const ELEMENT_DATA = [
 export class AppComponent {
   title = 'data_table';
 
-  @ViewChild(MatPaginator) paginator: MatPaginator;
-  displayedColumns: string[] = ['fav',  'name', 'country', 'code', 'web_pages'];
+  @ViewChild('uniSearchInput', {static: true}) uniSearchInput: ElementRef;
   isLoading = false;
-  value = '';
-  // dataSource: MatTableDataSource<any>;
-  dataSource: MatTableDataSource<any> = new MatTableDataSource(ELEMENT_DATA);
-  @ViewChild(MatSort) sort: MatSort;
+  searchInput = '';
+  dataSource: any;
+  originalDataSource: any;
   countries: any = {};
   countriesArr: any = [];
   resultsLength = 0;
   selectedCountry = '';
+  public pageSize: number = 10;
+  public itemsOnTable: Array<any> = ELEMENT_DATA;
+  public startIndex: number = 0;
+  public favToggled = false;
 
   constructor(public http: HttpClient,
     public storage: StorageService){}
+
+  
 
   ngOnInit(){
     this.getDataSource()
   }
 
+  /**
+   * init start, get the metdata and create the maps for future reference
+   */
   getDataSource(){
-    // merge(this.sort?.sortChange, this.paginator?.page).pipe(
-    //   startWith({}),
-    //   switchMap(()=>{
-    //     this.isLoading = true;
-    //     return this.http.get<any>('http://universities.hipolabs.com/search').pipe(catchError(() => observableOf(null)));
-    //   }),
-    //   map(data=>{
-    //     this.isLoading = false;
-    //     if(data === null){
-    //       return []
-    //     }
-
-    //     this.resultsLength = data.length;
-    //     return data
-    //   }
-    // )
-    // ).subscribe(data=>{
-    //   console.log(data);
-    // })
     this.isLoading = false;
     let favData = this.storage.getLocalStorage();
 
     this.http.get<any>('http://universities.hipolabs.com/search').subscribe(resp=>{
       this.isLoading = true;
-      console.log(this.isLoading, resp)
-      this.dataSource = new MatTableDataSource(resp)
+      this.dataSource = resp
+      this.originalDataSource = [...resp]
       resp.map((data: any)=>{
         this.countries[data.country] = data.country;
         if(favData){
@@ -82,72 +68,72 @@ export class AppComponent {
         return data.country
       })
       this.countriesArr = Object.keys(this.countries)
-      this.dataSource.paginator = this.paginator;
+
+      this.createCurrentTableIndex()
+      this.uniSearch()
+
+
+    }, (err)=>{
+      alert(err.message)
+      alert("retrying in ten seconds...")
+      setTimeout(()=>{
+        this.getDataSource();
+      }, 10000)
+      
     })
   }
 
-  setPagination(): void {
-    const paginator = setInterval(() => {
-      if (this.dataSource) {
-        clearInterval(paginator);
-        this.dataSource.paginator = this.paginator;
-      }
-    }, 100);
-  }
 
-  navigate(page: string){
-    window.open(page, "_blank")
-  }
-
-  applyFilter(){
-    const filterValue = this.value;
-    if(!filterValue){
-      if(this.selectedCountry){
-        this.applyCountry(this.selectedCountry)
-        return;
-      }
+  /**
+   * common function to update the tables current index.
+   */
+  createCurrentTableIndex(){
+    if(typeof this.pageSize == 'string'){
+      this.pageSize = parseInt(this.pageSize)
     }
-    this.dataSource.filterPredicate = (data, filter: string) => {
-      if(this.selectedCountry){
-        if(data.country.toLowerCase().includes(this.selectedCountry.toLowerCase())){
-          return data.name.toLowerCase().includes(filter)
-        }
-      } else {
-        return data.name.toLowerCase().includes(filter);
-      }
-    };
-    this.dataSource.filter = filterValue.trim().toLowerCase();
+    this.itemsOnTable = this.dataSource.slice(this.startIndex, this.startIndex + this.pageSize);
   }
 
-  applyCountry(country: string){
-    if(!this.selectedCountry){
-      if(this.value){
-        this.applyFilter()
-        return;
-      }
+  /**
+   * pagination function, to change the current page.
+   * @param type where the page should be navigated to
+   */
+  changePage(type: string){
+    switch(type){
+      case "next":
+        this.startIndex = this.startIndex + this.pageSize
+        break;
+      case "last":
+        this.startIndex = this.dataSource.length - this.pageSize
+        break;
+      case "pageSizeChanged":
+        break;
+      case "previous":
+        this.startIndex = this.startIndex - this.pageSize
+        break;
+      case "first":
+        this.startIndex = 0
+        break;
     }
-    this.dataSource.filterPredicate = (data, filter: string) => {
-      if(this.value){
-        if(data.name.toLowerCase().includes(this.value.toLowerCase())){
-          return data.country.toLowerCase().includes(filter);
-        } else {
-          return false;
-        }
-      } else {
-        return data.country.toLowerCase().includes(filter);
-      }
-    };
-    this.dataSource.filter = country.trim().toLowerCase();
+    this.createCurrentTableIndex()
+
   }
 
+  /**
+   * add element to favs
+   * @param ele element that needs to be added to favs
+   */
   addFav(ele: any){
     ele['addedFav'] = true;
     this.saveLocalStorage(ele)
   } 
 
+  /**
+   * save element to local storage
+   * @param ele element to save
+   */
   saveLocalStorage(ele: any){
     let currentData = this.storage.getLocalStorage();
-    console.log(currentData)
     if(!currentData){
       let favs: any = {
         indexes: {}
@@ -157,10 +143,13 @@ export class AppComponent {
     } else {
       currentData.indexes[ele['name']] = ele;
       this.storage.setLocalStorage(currentData)
-
     }
   }
 
+  /**
+   * remove element from local storage
+   * @param ele removed element
+   */
   removeFav(ele: any){
     let currentData = this.storage.getLocalStorage();
     delete currentData.indexes[ele['name']]
@@ -170,17 +159,104 @@ export class AppComponent {
     this.storage.setLocalStorage(currentData)
   }
 
-  public favToggled = false;
+  /**
+   * toggle favorites filter
+   */
   toggleFav(){
     this.favToggled = !this.favToggled;
-    if(this.favToggled){
-      this.dataSource.filterPredicate = (data, filter: string) => {
-        return data.addedFav
-      };
-      
-      this.dataSource.filter = 'added'
+    this.searchInput = '';
+    if (this.favToggled) {
+      this.dataSource = this.originalDataSource.filter((item: any)=>{
+        return item.addedFav;
+      })
     } else {
-      this.applyFilter()
+      this.dataSource = [...this.originalDataSource]
     }
+    this.startIndex = 0;
+    this.createCurrentTableIndex()
+  }
+
+
+  /**
+   * apply country filer.
+   */
+  applyCountry(){
+    this.dataSource = this.originalDataSource.filter((item: any)=>{
+      return item.country == this.selectedCountry
+    })
+    this.startIndex = 0;
+    this.createCurrentTableIndex()
+  }
+
+  /**
+   * clear country filter
+   */
+  clearCountry(){
+    this.dataSource = [...this.originalDataSource]
+    this.startIndex = 0;
+    this.createCurrentTableIndex()
+  }
+
+  /**
+   * to track
+   * @param index current index
+   * @param uni object
+   * @returns which element to track by
+   */
+  uniTrackBy(index:number, uni:any) {
+    return uni.name;
+  }
+
+  /**
+   * page to navigate to
+   * @param page nav url
+   */
+  navigate(page: string){
+    window.open(page, "_blank")
+  }
+
+  /**
+   * university object search by all fields
+   */
+  uniSearch(){
+    const search$ = fromEvent(this.uniSearchInput.nativeElement, 'keyup').pipe(
+      map((event: any)=> event.target.value),
+      distinctUntilChanged(),
+      debounceTime(500),
+      switchMap((element: any)=>{
+        return of(this.originalDataSource.filter((item: any) => {
+            let input = this.searchInput.toLowerCase()
+            if(item.name.toLowerCase().includes(input)){
+              return true;
+            } else if(item.alpha_two_code.toLowerCase().includes(input)){
+              return true;
+            } else if(item.country.toLowerCase().includes(input)){
+              return true;
+            } else if(item['state-province']?.toLowerCase().includes(input)){
+              return true;
+            } else if(
+              item['domains'].find((item: any)=>{
+                return item.toLowerCase().includes(input)
+              })?.length
+            ){
+              return true;
+            } else if( item['web_pages'].find((item: any)=>{
+              return item.toLowerCase().includes(input)
+            })?.length){
+              return true;
+            }else {
+              return false;
+            }
+          }))
+      })
+
+    )
+
+    search$.subscribe((data)=>{
+      this.selectedCountry = '';
+      this.dataSource = data
+      this.startIndex = 0;
+      this.createCurrentTableIndex()
+    })
   }
 }

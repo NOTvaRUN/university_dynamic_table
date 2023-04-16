@@ -24,13 +24,21 @@
 }
 
 table{
+    width: 100%;
     thead{
         background: #e4e4e4!important;
      
         tr{
+            height: 56px;
+            font-size: 14px;
             th{
+                text-overflow: ellipsis;
+                overflow: hidden;
+                outline: none;
+                text-align: left;
                 font-family: "MB"!important;
                 color: #434343;
+                padding: 0 16px 0 16px;
             }
             td:first-child{
                 background-color: red;
@@ -40,6 +48,20 @@ table{
                 span{
                     margin: 0 auto;
                 }
+            }
+        }
+    }
+    tbody{
+        tr{
+            height: 56px;
+            font-size: 14px;
+            td{
+                box-sizing: border-box;
+                overflow: hidden;
+                text-align: left;
+                text-overflow: ellipsis;
+                padding: 0 16px 0 16px;
+
             }
         }
     }
